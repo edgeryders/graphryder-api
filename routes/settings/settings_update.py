@@ -164,11 +164,12 @@ class HardUpdateFromEdgeRydersDiscourse(Resource):
             print(page_val)
             # TODO: Refactor from cat_url, cat_req, cat_json to tag_*. Because this has everything to do with tags and 
             # nothing with categories.
-            cat_url = config['importer_discourse']['abs_path']+config['importer_discourse']['tag_rel_path']+config['importer_discourse']['tag_focus']+".json?api_key="+config['importer_discourse']['admin_api_key']+"&page="+str(page_val)
+            cat_url = config['importer_discourse']['abs_path']+config['importer_discourse']['tag_rel_path']+config['importer_discourse']['tag_focus']+".json?page="+str(page_val)
+            headers = {'Api-Key': config['importer_discourse']['admin_api_key']}
             not_ok = True
             while not_ok:
                 try:
-                    cat_req = requests.get(cat_url)
+                    cat_req = requests.get(cat_url, headers=headers)
                 except:
                     print('request problem on topics page='+str(page_val))
                     time.sleep(2)

@@ -100,10 +100,11 @@ class ImportFromDiscourse(object):
         Continue = True
         page_val = 0
         while Continue:
-            user_url = config['importer_discourse']['abs_path']+config['importer_discourse']['users_rel_path']+".json?api_key="+config['importer_discourse']['admin_api_key']+"&page="+str(page_val)
+            user_url = config['importer_discourse']['abs_path']+config['importer_discourse']['users_rel_path']+".json?page="+str(page_val)
+            print(user_url)
             # The Discource consent.json API requires an "Accept:application/json" header. This requirement
             # will be removed once this issue is solved: https://github.com/edgeryders/annotator_store-gem/issues/2
-            headers = {'User-Agent': config['importer_discourse']['user_agent'], 'Accept': 'application/json'}
+            headers = {'User-Agent': config['importer_discourse']['user_agent'], 'Api-Key': config['importer_discourse']['admin_api_key'], 'Accept': 'application/json'}
             not_ok = True
             print('user_url = ' + user_url)
             while not_ok:
@@ -175,11 +176,12 @@ class ImportFromDiscourse(object):
 #        typep = self.graph.getStringProperty('type')
 
         # get list of posts from topic
-        post_url = config['importer_discourse']['abs_path']+config['importer_discourse']['topic_rel_path']+str(id)+".json?api_key="+config['importer_discourse']['admin_api_key']
+        post_url = config['importer_discourse']['abs_path']+config['importer_discourse']['topic_rel_path']+str(id)+".json"
+        headers = {'Api-Key': config['importer_discourse']['admin_api_key']}
         not_ok = True
         while not_ok:
             try:
-                post_req = requests.get(post_url)
+                post_req = requests.get(post_url, headers=headers)
             except:
                 print('request problem on topic '+str(id))
                 time.sleep(2)
@@ -206,11 +208,11 @@ class ImportFromDiscourse(object):
             #print(str(len(post_json['post_stream']['stream'])) +' : '+str(i)+' '+str(comment_id))
             if index_post >= len(post_json['post_stream']['posts']):
             # if comment resume is unavailable (not one of the first 20 posts)
-                comment_url = config['importer_discourse']['abs_path']+config['importer_discourse']['posts_rel_path']+str(comment_id)+".json?api_key="+config['importer_discourse']['admin_api_key']
+                comment_url = config['importer_discourse']['abs_path']+config['importer_discourse']['posts_rel_path']+str(comment_id)+".json"
                 not_ok = True
                 while not_ok:
                     try:
-                        comment_req = requests.get(comment_url)
+                        comment_req = requests.get(comment_url, headers=headers)
                     except:
                         print('request problem on post '+str(comment_id))
                         time.sleep(2)
@@ -377,11 +379,12 @@ class ImportFromDiscourse(object):
         Continue = True
         page_val = 0
         while Continue:
-            tag_url = config['importer_discourse']['abs_path']+config['importer_discourse']['codes_rel_path']+".json?api_key="+config['importer_discourse']['admin_api_key']+"&per_page=5000&page="+str(page_val)
+            tag_url = config['importer_discourse']['abs_path']+config['importer_discourse']['codes_rel_path']+".json?per_page=5000&page="+str(page_val)
+            headers = {'Api-Key': config['importer_discourse']['admin_api_key']}
             not_ok = True
             while not_ok:
                 try:
-                    tag_req = requests.get(tag_url)
+                    tag_req = requests.get(tag_url, headers=headers)
                 except:
                     print('request problem on tag page '+str(page_val))
                     time.sleep(2)
@@ -438,11 +441,12 @@ class ImportFromDiscourse(object):
         Continue = True
         page_val = 0
         while Continue:
-            tag_url = config['importer_discourse']['abs_path']+config['importer_discourse']['codes_rel_path']+".json?api_key="+config['importer_discourse']['admin_api_key']+"&per_page=5000&page="+str(page_val)
+            tag_url = config['importer_discourse']['abs_path']+config['importer_discourse']['codes_rel_path']+".json?per_page=5000&page="+str(page_val)
+            headers = {'Api-Key': config['importer_discourse']['admin_api_key']}
             not_ok = True
             while not_ok:
                 try:
-                    tag_req = requests.get(tag_url)
+                    tag_req = requests.get(tag_url, headers=headers)
                 except:
                     print('request problem on tag page '+str(page_val))
                     time.sleep(2)
@@ -519,11 +523,12 @@ class ImportFromDiscourse(object):
         page_val = 0
         while Continue:
         # get pages of 1000 annotations
-            ann_url = config['importer_discourse']['abs_path']+config['importer_discourse']['annotations_rel_path']+".json?api_key="+config['importer_discourse']['admin_api_key']+"&discourse_tag="+config['importer_discourse']['tag_focus']+"&per_page=1000&page="+str(page_val)
+            ann_url = config['importer_discourse']['abs_path']+config['importer_discourse']['annotations_rel_path']+".json?discourse_tag="+config['importer_discourse']['tag_focus']+"&per_page=1000&page="+str(page_val)
+            headers = {'Api-Key': config['importer_discourse']['admin_api_key']}
             not_ok = True
             while not_ok:
                 try:
-                    ann_req = requests.get(ann_url)
+                    ann_req = requests.get(ann_url, headers=headers)
                 except:
                     print('request problem on annotation page '+str(page_val))
                     time.sleep(2)
