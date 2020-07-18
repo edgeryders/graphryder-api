@@ -13,9 +13,7 @@ class CreateTagFocusTlp(object):
         print('Initializing')
 
         self.neo4j_graph = Graph(
-            host=config['neo4j']['url'],
-            http_port=int(config['neo4j']['http_port']),
-            bolt_port=int(config['neo4j']['bolt_port']),
+            "bolt://" + config['neo4j']['url'] + ':' + str(config['neo4j']['bolt_port']),
             user=config['neo4j']['user'],
             password=config['neo4j']['password']
         )
