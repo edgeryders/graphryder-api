@@ -186,7 +186,11 @@ class ImportFromDiscourse(object):
                 post_json = []
                 time.sleep(2)
                 continue
-            not_ok = False
+            if 'error_type' in post_json:
+                time.sleep(post_json['extras']['wait_seconds'] + 1)
+                print('Waiting for rate limit...')
+            else:
+                not_ok = False
         edgeToCreate = []
         commentList = {}
 
