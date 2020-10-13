@@ -174,7 +174,6 @@ class ImportFromDiscourse(object):
         # get list of posts from topic
         post_url = config['importer_discourse']['abs_path']+config['importer_discourse']['topic_rel_path']+str(id)+".json"
         headers = {'Api-Key': config['importer_discourse']['admin_api_key']}
-        headers = {'User-Agent': config['importer_discourse']['user_agent'], 'Api-Key': config['importer_discourse']['admin_api_key'], 'Accept': 'application/json'}
         not_ok = True
         while not_ok:
             try:
@@ -220,7 +219,7 @@ class ImportFromDiscourse(object):
                             print('rate limit hit during import of post ' + str(comment_id) + ', sleeping for 60 seconds')
                             time.sleep(60)
                             continue
-                        print('read post ' + str(comment_id) + ' by ' + comment['name'])
+                        print('read post ' + str(comment_id) + ' by ' + str(comment['username']))
                     except:
                         print("failed read on post "+str(comment_id))
                         time.sleep(2)
@@ -230,11 +229,11 @@ class ImportFromDiscourse(object):
             else:
             # else get available resume
                 comment = post_json['post_stream']['posts'][index_post]
-                print('read post ' + str(comment_id) + ' by ' + comment['name'])
+                print('read post ' + str(comment_id) + ' by ' + str(comment['username']))
 
             if not(comment['user_id'] in self.users):
             # author of the piece of content has not given the authorisation to publish it
-                print(comment['name'] + ' is not in self.users')
+                print(str(comment['username']) + ' is not in self.users')
                 continue
 
             commentList[comment['post_number']] = comment['id']
