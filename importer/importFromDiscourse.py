@@ -11,6 +11,8 @@ import sys
 import re
 from tulip import *
 
+from pprint import pprint
+
 config = configparser.ConfigParser()
 config.read("config.ini")
 
@@ -39,15 +41,15 @@ class ImportFromDiscourse(object):
     unmatch_annotation_tag = 0
     unmatch_annotation_tag_open = 0
     unmatch_annotation_entity = 0
-    
+
     def __init__(self, erase=False, debug=False):
         super(ImportFromDiscourse, self).__init__()
         print('Initializing')
         self.neo4j_graph = Graph(
-            host=config['neo4j']['url'], 
+            host=config['neo4j']['url'],
             http_port=int(config['neo4j']['http_port']),
             bolt_port=int(config['neo4j']['bolt_port']),
-            user=config['neo4j']['user'], 
+            user=config['neo4j']['user'],
             password=config['neo4j']['password']
         )
         if erase:
@@ -96,11 +98,11 @@ class ImportFromDiscourse(object):
         Continue = True
         page_val = 0
         while Continue:
-            user_url = config['importer_discourse']['abs_path']+config['importer_discourse']['users_rel_path']+".json?page="+str(page_val)            # The Discource consent.json API requires an "Accept:application/json" header. This requirement 
-            # will be removed once this issue is solved: https://github.com/edgeryders/annotator_store-gem/issues/2
+            user_url = config['importer_discourse']['abs_path']+config['importer_discourse']['users_rel_path']+".json?api_key="+config['importer_discourse']['admin_api_key']+"&page="+str(page_val)
+            # The Discource consent.json API requires an "Accept:application/json" header. This requirement
             headers = {'User-Agent': config['importer_discourse']['user_agent'], 'Api-Key': config['importer_discourse']['admin_api_key'], 'Accept': 'application/json'}
             not_ok = True
-            # print('user_url = ' + user_url)
+            print('user_url = ' + user_url)
             while not_ok:
                 try:
                     user_req = requests.get(user_url, headers=headers)
@@ -120,11 +122,12 @@ class ImportFromDiscourse(object):
                 if not(user['id'] in self.users):
                     if (config['importer_discourse']['ensure_consent'] == "0"):
                         self.users[user['id']] = user['username']
+                        print(user['username'] + ' added to self.users')
                     else:
                         if (user['edgeryders_consent']=="1"):
                             self.users[user['id']] = user['username']
-            
-            if len(user_json) == 5000:
+
+            if len(user_json) == 100:
                 page_val += 1
             else:
                 Continue = False
@@ -171,6 +174,7 @@ class ImportFromDiscourse(object):
         # get list of posts from topic
         post_url = config['importer_discourse']['abs_path']+config['importer_discourse']['topic_rel_path']+str(id)+".json"
         headers = {'Api-Key': config['importer_discourse']['admin_api_key']}
+        headers = {'User-Agent': config['importer_discourse']['user_agent'], 'Api-Key': config['importer_discourse']['admin_api_key'], 'Accept': 'application/json'}
         not_ok = True
         while not_ok:
             try:
@@ -181,11 +185,16 @@ class ImportFromDiscourse(object):
                 continue
             try:
                 post_json = post_req.json()
+                if 'error_type' in post_json.keys() and (post_json['error_type'] == 'rate_limit'):
+                    print('rate limit hit during import of topic ' + str(id) + ', sleeping for 60 seconds')
+                    time.sleep(60)
+                    continue
             except:
                 print("failed read on topic "+str(id))
                 post_json = []
                 time.sleep(2)
                 continue
+            print('topic ' + str(id) + ' read')
             not_ok = False
         edgeToCreate = []
         commentList = {}
@@ -198,8 +207,7 @@ class ImportFromDiscourse(object):
             # if comment resume is unavailable (not one of the first 20 posts)
                 comment_url = config['importer_discourse']['abs_path']+config['importer_discourse']['posts_rel_path']+str(comment_id)+".json"
                 not_ok = True
-                headers = {'User-Agent': config['importer_discourse']['user_agent'], 'Api-Key': config['importer_discourse']['admin_api_key'], 'Accept': 'application/json'}
-                while not_ok:    
+                while not_ok:
                     try:
                         comment_req = requests.get(comment_url, headers=headers)
                     except:
@@ -208,6 +216,11 @@ class ImportFromDiscourse(object):
                         continue
                     try:
                         comment = comment_req.json()
+                        if 'error_type' in comment.keys() and (post_json['error_type'] == 'rate_limit'):
+                            print('rate limit hit during import of post ' + str(comment_id) + ', sleeping for 60 seconds')
+                            time.sleep(60)
+                            continue
+                        print('read post ' + str(comment_id) + ' by ' + comment['name'])
                     except:
                         print("failed read on post "+str(comment_id))
                         time.sleep(2)
@@ -217,10 +230,12 @@ class ImportFromDiscourse(object):
             else:
             # else get available resume
                 comment = post_json['post_stream']['posts'][index_post]
+                print('read post ' + str(comment_id) + ' by ' + comment['name'])
 
             if not(comment['user_id'] in self.users):
             # author of the piece of content has not given the authorisation to publish it
-                continue 
+                print(comment['name'] + ' is not in self.users')
+                continue
 
             commentList[comment['post_number']] = comment['id']
             if index_post == 0:
@@ -259,7 +274,7 @@ class ImportFromDiscourse(object):
                 self.createContent(comment['id'], type, label, content, comment['created_at'], str(comment['topic_id'])+'/'+str(comment['post_number']))
 #                self.existing_elements['comments'][comment['id']] = comment_n
                 self.existing_elements['comments'].append(comment['id'])
-            
+
                 # response to a comment
                 if not(comment['reply_to_post_number'] is None):
                     #reply_id = comment['reply_to_post_number']
@@ -399,9 +414,9 @@ class ImportFromDiscourse(object):
                         self.map_tag_to_tag[tag['id']] = self.tags[tag['name'].lower()]
 #                    self.existing_elements['tags'][tag['id']] = tag_n
                     self.existing_elements['tags'].append(tag['id'])
-                    
+
                 # no need to create tag hierarchy as the route does not give ancestry info
-            
+
             if len(tag_json) == 5000:
                 page_val += 1
             else:
@@ -435,7 +450,7 @@ class ImportFromDiscourse(object):
         print('Import annotations')
         #json_annotations = json.load(open(config['importer']['json_annotations_path']))
         ImportFromDiscourse.unmatch_annotation_user = 0
-        ImportFromDiscourse.unmatch_annotation_tag = 0 
+        ImportFromDiscourse.unmatch_annotation_tag = 0
         ImportFromDiscourse.unmatch_annotation_entity = 0
         ImportFromDiscourse.unmatch_annotation_tag_req = 0
         ImportFromDiscourse.unmatch_annotation_entity_req = 0
@@ -560,9 +575,8 @@ class ImportFromDiscourse(object):
         "unmatch comment -> (parent): ", ImportFromDiscourse.unmatch_comment_parent,"\n",
         "unmatch code -> (parent): ", ImportFromDiscourse.unmatch_tag_parent,"\n",
         "unmatch annotation -> (user): ", ImportFromDiscourse.unmatch_annotation_user,"\n",
-        "unmatch annotation -> (code): ", ImportFromDiscourse.unmatch_annotation_tag,"\n", 
-        "unmatch req annotation -> (code): ", ImportFromDiscourse.unmatch_annotation_tag_req,"\n", 
+        "unmatch annotation -> (code): ", ImportFromDiscourse.unmatch_annotation_tag,"\n",
+        "unmatch req annotation -> (code): ", ImportFromDiscourse.unmatch_annotation_tag_req,"\n",
         "unmatch annotation -> (entity): ", ImportFromDiscourse.unmatch_annotation_entity,"\n"
         "unmatch req annotation -> (entity): ", ImportFromDiscourse.unmatch_annotation_entity_req,"\n")
         return response
-

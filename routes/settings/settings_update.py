@@ -176,6 +176,10 @@ class HardUpdateFromEdgeRydersDiscourse(Resource):
                     continue
                 try:
                     cat_json = cat_req.json()
+                    if 'error_type' in cat_json.keys() and (cat_json['error_type'] == 'rate_limit'):
+                        print('rate limit hit during import of topics page ' + str(page_val) + ', sleeping for 60 seconds')
+                        time.sleep(60)
+                        continue
                 except:
                     print("failed read on topic page "+str(page_val))
                     time.sleep(2)

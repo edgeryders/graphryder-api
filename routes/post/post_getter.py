@@ -4,6 +4,8 @@ from connector import neo4j
 from routes.utils import addargs, addTimeFilter, makeResponse
 import datetime
 
+from pprint import pprint
+
 parser = reqparse.RequestParser()
 
 class GetPost(Resource):
